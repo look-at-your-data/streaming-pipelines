@@ -77,7 +77,7 @@ function kill_process {
 station_information="station-information"
 station_status="station-status"
 station_san_francisco="station-san-francisco"
-station_fr_ms="station_fr_ms"
+station_fr_ms="station-france-marseille"
 
 
 echo "====Kill running producers===="
