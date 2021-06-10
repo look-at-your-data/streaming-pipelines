@@ -1,67 +1,13 @@
-defaults: &defaults
-    docker:
-        - image: circleci/openjdk:8-jdk
-    working_directory: /home/circleci/project
-
-version: 2
-jobs:
-    build:
-        <<: *defaults
-        steps:
-            - checkout
-            - restore_cache:
-                keys:
-                    - java-dependencies-{{ checksum "./CitibikeApiProducer/build.gradle" }}
-            - restore_cache:
-                keys:
-                    - scala-dependencies-{{ checksum "./RawDataSaver/build.sbt" }}-{{ checksum "./StationConsumer/build.sbt"}}-{{ checksum "./StationTransformerNYC/build.sbt"}}
-            - run:
-                command: ./sbin/buildAll.sh               
-            - persist_to_workspace:
-                root: /home/circleci/project
-                paths:
-                    - CitibikeApiProducer/build/
-                    - RawDataSaver/target/
-                    - StationConsumer/target/
-                    - StationTransformerNYC/target/
-            - run:
-                command: ls /home/circleci/project/
-            - save_cache:
-                key: scala-dependencies-{{ checksum "./RawDataSaver/build.sbt" }}-{{ checksum "./StationConsumer/build.sbt"}}-{{ checksum "./StationTransformerNYC/build.sbt"}}
-                paths:
-                    - "~/.ivy2/cache"
-            - save_cache:
-                key: java-dependencies-{{ checksum "./CitibikeApiProducer/build.gradle" }}
-                paths:
-                    - "~/.gradle"
-
-    deploy:
-        <<: *defaults
-        steps:
-            - checkout
-            - attach_workspace:
-                at: /home/circleci/project
-            - add_ssh_keys:
-                fingerprints:
-                  - "ac:91:66:6b:c2:7a:f7:5e:72:4d:1c:0c:ac:d0:94:f3"
-            - run:
-                command: ./sbin/deploy.sh $BASTION_PUBLIC_IP $TRAINING_COHORT
-
+# Use the latest 2.1 version of CircleCI pipeline process engine. See: https://circleci.com/docs/2.0/configuration-reference
+version: 2.1
+# Use a package of configuration called an orb.
+orbs:
+  # Declare a dependency on the welcome-orb
+  welcome: circleci/welcome-orb@0.4.1
+# Orchestrate or schedule a set of jobs
 workflows:
-    version: 2
-    build_and_deploy:
-        jobs:
-            - build:
-                filters:
-                    branches:
-                        only: 
-                            - master
-                            - start
-            - approve-deploy:
-                type: approval
-                requires: 
-                    - build
-            - deploy:
-                requires:
-                    - approve-deploy
-
+  # Name the workflow "welcome"
+  welcome:
+    # Run the welcome/run job in its own container
+    jobs:
+      - welcome/run
