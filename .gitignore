@@ -31,3 +31,6 @@ target/
 metastore_db/
 
 *.log
+
+# sbt
+.bsp/
