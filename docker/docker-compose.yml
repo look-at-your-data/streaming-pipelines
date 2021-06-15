@@ -79,6 +79,26 @@ services:
           - zookeeper-seed
         networks:
           - streaming-data-internal
+    
+    station-nyc-producer:
+        build:
+            context: ../CitibikeApiProducer
+            dockerfile: Dockerfile-station-nyc
+        depends_on:
+          - kafka
+          - zookeeper-seed
+        networks:
+          - streaming-data-internal
+
+    station-france-marseille-producer:
+        build:
+            context: ../CitibikeApiProducer
+            dockerfile: Dockerfile-station-france-marseille
+        depends_on:
+            - kafka
+            - zookeeper-seed
+        networks:
+            - streaming-data-internal
 
     raw-station-information-data-saver:
         build:
@@ -131,6 +151,23 @@ services:
           - streaming-data-internal
         restart: on-failure
 
+    raw-station-data-france-saver:
+        build:
+            context: ../RawDataSaver
+            dockerfile: Dockerfile-station-data-FR-MS
+        depends_on:
+          - kafka
+          - station-information-producer
+          - station-status-producer
+          - station-san-francisco-producer
+          - hadoop-seed
+          - zookeeper-seed
+        volumes:
+          - ~/.ivy2:/root/.ivy2:rw
+        networks:
+          - streaming-data-internal
+        restart: on-failure
+
     station-consumer:
         build:
             context: ../StationConsumer
@@ -147,21 +184,6 @@ services:
           - streaming-data-internal
         restart: on-failure
 
-    station-transformer-nyc:
-        build:
-            context: ../StationTransformerNYC
-        depends_on:
-          - zookeeper-seed
-          - hadoop-seed
-          - kafka
-          - station-status-producer
-          - station-information-producer
-        volumes:
-          - ~/.ivy2:/root/.ivy2:rw
-        command: ["./wait-for.sh", "zookeeper:2181", "-t", "30"]
-        networks:
-          - streaming-data-internal
-        restart: on-failure
 
 networks:
     streaming-data-internal:

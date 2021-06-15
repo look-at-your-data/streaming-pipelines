@@ -70,13 +70,15 @@ function kill_process {
     then
         echo "no \${query} process running"
     else
-        kill -9 \$pid
+        kill -9 $pid
     fi
 }
 
 station_information="station-information"
 station_status="station-status"
 station_san_francisco="station-san-francisco"
+station_fr_ms="station-france-marseille"
+station_nyc="station-nyc"
 
 
 echo "====Kill running producers===="
@@ -84,6 +86,8 @@ echo "====Kill running producers===="
 kill_process \${station_information}
 kill_process \${station_status}
 kill_process \${station_san_francisco}
+kill_process \${station_fr_ms}
+kill_process \${station_nyc}
 
 echo "====Runing Producers Killed===="
 
@@ -91,6 +95,8 @@ echo "====Deploy Producers===="
 nohup java -jar /tmp/tw-citibike-apis-producer0.1.0.jar --spring.profiles.active=\${station_information} --kafka.brokers=kafka.${TRAINING_COHORT}.training:9092 1>/tmp/\${station_information}.log 2>/tmp/\${station_information}.error.log &
 nohup java -jar /tmp/tw-citibike-apis-producer0.1.0.jar --spring.profiles.active=\${station_san_francisco} --producer.topic=station_data_sf --kafka.brokers=kafka.${TRAINING_COHORT}.training:9092 1>/tmp/\${station_san_francisco}.log 2>/tmp/\${station_san_francisco}.error.log &
 nohup java -jar /tmp/tw-citibike-apis-producer0.1.0.jar --spring.profiles.active=\${station_status} --kafka.brokers=kafka.${TRAINING_COHORT}.training:9092 1>/tmp/\${station_status}.log 2>/tmp/\${station_status}.error.log &
+nohup java -jar /tmp/tw-citibike-apis-producer0.1.0.jar --spring.profiles.active=\${station_fr_ms} --kafka.brokers=kafka.${TRAINING_COHORT}.training:9092 1>/tmp/\${station_fr_ms}.log 2>/tmp/\${station_fr_ms}.error.log &
+nohup java -jar /tmp/tw-citibike-apis-producer0.1.0.jar --spring.profiles.active=\${station_nyc} --kafka.brokers=kafka.${TRAINING_COHORT}.training:9092 1>/tmp/\${station_nyc}.log 2>/tmp/\${station_nyc}.error.log &
 
 echo "====Producers Deployed===="
 EOF
@@ -125,6 +131,7 @@ echo "====Kill Old Raw Data Saver===="
 kill_application "StationStatusSaverApp"
 kill_application "StationInformationSaverApp"
 kill_application "StationDataSFSaverApp"
+kill_application "StationDataFRMSSaverApp"
 
 echo "====Old Raw Data Saver Killed===="
 
@@ -136,6 +143,8 @@ nohup spark-submit --master yarn --deploy-mode cluster --class com.tw.apps.Stati
 
 nohup spark-submit --master yarn --deploy-mode cluster --class com.tw.apps.StationLocationApp --name StationDataSFSaverApp --packages org.apache.spark:spark-sql-kafka-0-10_2.11:2.3.0 --driver-memory 500M --conf spark.executor.memory=2g --conf spark.cores.max=1 /tmp/tw-raw-data-saver_2.11-0.0.1.jar kafka.${TRAINING_COHORT}.training:2181 "/tw/stationDataSF" 1>/tmp/raw-station-data-sf-saver.log 2>/tmp/raw-station-data-sf-saver.error.log &
 
+nohup spark-submit --master yarn --deploy-mode cluster --class com.tw.apps.StationLocationApp --name StationDataFRMSSaverApp --packages org.apache.spark:spark-sql-kafka-0-10_2.11:2.3.0 --driver-memory 500M --conf spark.executor.memory=2g --conf spark.cores.max=1 /tmp/tw-raw-data-saver_2.11-0.0.1.jar kafka.${TRAINING_COHORT}.training:2181 "/tw/stationDataFR_MS" 1>/tmp/raw-station-data-fr-ms-saver.log 2>/tmp/raw-station-data-fr-ms-saver.error.log &
+
 echo "====Raw Data Saver Deployed===="
 EOF
 
@@ -143,7 +152,6 @@ EOF
 echo "====Copy Station Consumers Jar to EMR===="
 scp StationConsumer/target/scala-2.11/tw-station-consumer_2.11-0.0.1.jar emr-master.${TRAINING_COHORT}.training:/tmp/
 
-scp StationTransformerNYC/target/scala-2.11/tw-station-transformer-nyc_2.11-0.0.1.jar emr-master.${TRAINING_COHORT}.training:/tmp/
 echo "====Station Consumers Jar Copied to EMR===="
 
 scp sbin/go.sh emr-master.${TRAINING_COHORT}.training:/tmp/go.sh
@@ -157,7 +165,6 @@ source /tmp/go.sh
 echo "====Kill Old Station Consumers===="
 
 kill_application "StationApp"
-kill_application "StationTransformerNYC"
 
 echo "====Old Station Consumers Killed===="
 
@@ -165,7 +172,6 @@ echo "====Deploy Station Consumers===="
 
 nohup spark-submit --master yarn --deploy-mode cluster --class com.tw.apps.StationApp --name StationApp --packages org.apache.spark:spark-sql-kafka-0-10_2.11:2.3.0  --driver-memory 500M --conf spark.executor.memory=2g --conf spark.cores.max=1 /tmp/tw-station-consumer_2.11-0.0.1.jar kafka.${TRAINING_COHORT}.training:2181 1>/tmp/station-consumer.log 2>/tmp/station-consumer.error.log &
 
-nohup spark-submit --master yarn --deploy-mode cluster --class com.tw.apps.StationApp --name StationTransformerNYC --packages org.apache.spark:spark-sql-kafka-0-10_2.11:2.3.0  --driver-memory 500M --conf spark.executor.memory=2g --conf spark.cores.max=1 /tmp/tw-station-transformer-nyc_2.11-0.0.1.jar kafka.${TRAINING_COHORT}.training:2181 1>/tmp/station-transformer-nyc.log 2>/tmp/station-transformer-nyc.error.log &
 
 echo "====Station Consumers Deployed===="
 EOF
