@@ -58,6 +58,8 @@ object StationApp {
       .groupByKey(r=>r.station_id)
       .reduceGroups((r1,r2)=>if (r1.last_updated > r2.last_updated) r1 else r2)
       .map(_._2)
+      .toDF()
+      .transform(formatDate(_))
       .writeStream
       .format("overwriteCSV")
       .outputMode("complete")
