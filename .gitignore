@@ -3,6 +3,7 @@
 *.iws
 *.ipr
 *.iml
+.java-version
 
 # Gradle
 .gradle/
