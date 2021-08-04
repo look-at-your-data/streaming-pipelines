@@ -49,6 +49,7 @@ object StationApp {
       .option("kafka.bootstrap.servers", stationKafkaBrokers)
       .option("subscribe", sfStationTopic)
       .option("startingOffsets", "latest")
+      .option("failOnDataLoss", false)
       .load()
       .selectExpr("CAST(value AS STRING) as raw_payload")
       .transform(sfStationStatusJson2DF(_, spark))
