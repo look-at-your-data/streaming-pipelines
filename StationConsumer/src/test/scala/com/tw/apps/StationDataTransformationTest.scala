@@ -1,8 +1,9 @@
 package com.tw.apps
 
-import StationDataTransformation.nycStationStatusJson2DF
-import org.apache.spark.sql.SparkSession
+import StationDataTransformation.{formatDate, nycStationStatusJson2DF}
+import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.catalyst.ScalaReflection
+import org.apache.spark.sql.functions.from_json
 import org.scalatest._
 
 class StationDataTransformationTest extends FeatureSpec with Matchers with GivenWhenThen {
@@ -65,6 +66,31 @@ class StationDataTransformationTest extends FeatureSpec with Matchers with Given
       row1.get(6) should be("Atlantic Ave & Fort Greene Pl")
       row1.get(7) should be(40.68382604)
       row1.get(8) should be(-73.97632328)
+    }
+
+    scenario("Transform last updated") {
+
+      val testStationMart =
+        """[
+          {"last_updated":1536242527}
+          ]"""
+
+      Given("Sample data for last_updated")
+      val testDF1 = spark.read.json(Seq(testStationMart).toDS())
+      testDF1.show(false)
+
+
+      When("Transformations are applied")
+      val resultDF1 = testDF1.transform(formatDate(_))
+
+      Then("Useful columns are extracted")
+      resultDF1.schema.fields(0).name should be("last_updated_epoch")
+      resultDF1.schema.fields(1).name should be("last_updated")
+
+      val row1 = resultDF1.head()
+
+      row1.get(0) should be(1536242527)
+      row1.get(1) should be("2018-09-06T07:32:07")
     }
   }
 }
