@@ -10,6 +10,7 @@ class StationDataTransformationTest extends FeatureSpec with Matchers with Given
 
   feature("Apply station status transformations to data frame") {
     val spark = SparkSession.builder.appName("Test App").master("local").getOrCreate()
+    spark.conf.set("spark.sql.session.timeZone", "UTC");
     import spark.implicits._
 
     scenario("Transform nyc station data frame") {
@@ -90,8 +91,7 @@ class StationDataTransformationTest extends FeatureSpec with Matchers with Given
       val row1 = resultDF1.head()
 
       row1.get(0) should be(1536242527)
-      println("Formatted row: " + row1)
-      //row1.get(1) should be("2018-09-06T07:32:07")
+      row1.get(1) should be("2018-09-06T02:02:07")
     }
   }
 }
