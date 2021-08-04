@@ -88,8 +88,9 @@ class StationDataTransformationTest extends FeatureSpec with Matchers with Given
       resultDF1.schema.fields(1).name should be("last_updated")
 
       val row1 = resultDF1.head()
-      println("ROw: " + row1);
+
       row1.get(0) should be(1536242527)
+      row1.get(1) should be("2018-09-06T07:32:07")
     }
   }
 }
