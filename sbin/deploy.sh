@@ -183,3 +183,7 @@ echo "====Create Hive Table on top of Station Mart===="
 hive -f /tmp/station_mart.sql
 
 EOF
+
+echo "==============Copy Airflow Dags to Airflow EC2 Instance================"
+scp airflow/dags/*.py airflow.${TRAINING_COHORT}.training:/home/ec2-user/airflow/dags/
+echo "==============Copied Airflow Dags to Airflow EC2 Instance================"
