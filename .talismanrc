@@ -1,0 +1,3 @@
+fileignoreconfig:
+- filename: hive_scripts/station_mart.sql
+  checksum: b7a58239faa2517d4cee6f3cfc6915083695aa32e861a13dce5908425aae4127
