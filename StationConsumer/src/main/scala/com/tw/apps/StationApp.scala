@@ -21,6 +21,7 @@ object StationApp {
 
     val nycStationTopic = new String(zkClient.getData.watched.forPath("/tw/stationDataNYC/topic"))
     val sfStationTopic = new String(zkClient.getData.watched.forPath("/tw/stationDataSF/topic"))
+    val franceStationTopic = new String(zkClient.getData.watched.forPath("/tw/stationDataFrance/topic"))
 
     val checkpointLocation = new String(
       zkClient.getData.watched.forPath("/tw/output/checkpointLocation"))
@@ -31,6 +32,7 @@ object StationApp {
     val spark = SparkSession.builder
       .appName("StationConsumer")
       .getOrCreate()
+    spark.conf.set("spark.sql.session.timeZone", "UTC");
 
     import spark.implicits._
 
@@ -39,6 +41,7 @@ object StationApp {
       .option("kafka.bootstrap.servers", stationKafkaBrokers)
       .option("subscribe", nycStationTopic)
       .option("startingOffsets", "latest")
+      .option("failOnDataLoss", false)
       .load()
       .selectExpr("CAST(value AS STRING) as raw_payload")
       .transform(nycStationStatusJson2DF(_, spark))
@@ -48,16 +51,30 @@ object StationApp {
       .option("kafka.bootstrap.servers", stationKafkaBrokers)
       .option("subscribe", sfStationTopic)
       .option("startingOffsets", "latest")
+      .option("failOnDataLoss", false)
       .load()
       .selectExpr("CAST(value AS STRING) as raw_payload")
       .transform(sfStationStatusJson2DF(_, spark))
 
+    val franceStationDF = spark.readStream
+      .format("kafka")
+      .option("kafka.bootstrap.servers", stationKafkaBrokers)
+      .option("subscribe", franceStationTopic)
+      .option("startingOffsets", "latest")
+      .option("failOnDataLoss", false)
+      .load()
+      .selectExpr("CAST(value AS STRING) as raw_payload")
+      .transform(franceStationStatusJson2DF(_, spark))
+
     nycStationDF
       .union(sfStationDF)
+      .union(franceStationDF)
       .as[StationData]
       .groupByKey(r=>r.station_id)
       .reduceGroups((r1,r2)=>if (r1.last_updated > r2.last_updated) r1 else r2)
       .map(_._2)
+      .toDF()
+      .transform(formatDate(_))
       .writeStream
       .format("overwriteCSV")
       .outputMode("complete")

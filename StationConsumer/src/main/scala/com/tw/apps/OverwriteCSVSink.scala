@@ -1,6 +1,7 @@
 package com.tw.apps
 
 import org.apache.spark.sql.execution.streaming.Sink
+import org.apache.spark.sql.functions._
 import org.apache.spark.sql.sources.{DataSourceRegister, StreamSinkProvider}
 import org.apache.spark.sql.streaming.OutputMode
 import org.apache.spark.sql.{DataFrame, SQLContext, SaveMode}
@@ -12,18 +13,22 @@ class OverwriteCSVSink(sqlContext: SQLContext,
                        outputMode: OutputMode) extends Sink {
 
   override def addBatch(batchId: Long, data: DataFrame): Unit = {
-
     data.sparkSession.createDataFrame(
       data.sparkSession.sparkContext.parallelize(data.collect()), data.schema)
       .repartition(1)
+      .withColumn("year", year(current_date))
+      .withColumn("month", lpad(month(current_date), 2, "0"))
+      .withColumn("day", lpad(dayofmonth(current_date), 2, "0"))
+      .withColumn("hour", lpad(hour(current_timestamp), 2, "0"))
       .write
-      .mode(SaveMode.Overwrite)
+      .partitionBy("year", "month", "day", "hour")
+      .mode(SaveMode.Append)
       .format("csv")
       .option("header", parameters.get("header").orNull)
       .option("truncate", parameters.get("truncate").orNull)
       .option("checkpointLocation", parameters.get("checkpointLocation").orNull)
       .option("path", parameters.get("path").orNull)
-      .save()
+      .insertInto("station_mart")
   }
 }
 
